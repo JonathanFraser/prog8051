@@ -1,7 +1,6 @@
 #include <QFileDialog>
 #include <QString>
 #include <QMessageBox>
-#include "qextserialport.h"
 #include "prog8051.h"
 
 prog8051::prog8051(QWidget* parent):QDialog(parent)
@@ -10,6 +9,7 @@ prog8051::prog8051(QWidget* parent):QDialog(parent)
 	connect(QuitButton,SIGNAL(clicked()),this,SLOT(accept()));
 	connect(BrowseButton,SIGNAL(clicked()),this,SLOT(BrowseClicked()));
 	connect(ProgramButton,SIGNAL(clicked()),this,SLOT(ProgramClicked()));
+	ProgressBar->setRange(0,100);
 }
 
 void prog8051::BrowseClicked(void)
@@ -19,27 +19,50 @@ void prog8051::BrowseClicked(void)
 	HexFile->setText(filename);
 }
 
+void prog8051::Alerts(QString message)
+{
+	QMessageBox::information(this,"ERROR",message);
+}
+
+void prog8051::SetStatus(int i)
+{
+	i = (i>100)?100:i;
+	i = (i<0)?0:i;
+	ProgressBar->setValue(i);
+}
+
+void prog8051::ThreadFinished()
+{
+	SetInst("Adjust Settings....");
+	ButtonsToggle(true);
+}
+
+void prog8051::ButtonsToggle(bool on)
+{
+	SerialPort->setEnabled(on);
+	Baudrate->setEnabled(on);
+	HexFile->setEnabled(on);
+	BrowseButton->setEnabled(on);
+	ProgramButton->setEnabled(on);
+	QuitButton->setEnabled(on);
+	
+}
+
+void prog8051::SetInst(QString str)
+{
+	Instructions->setText(str);
+}
+
 void prog8051::ProgramClicked(void)
 {
-	int j;
-	QextSerialPort port;
-	QByteArray ReadString;
-	QFile DataFile;
-	port.setPortName(SerialPort->text());
-	port.setBaudRate(BAUD9600);
-	port.setDataBits(DATA_8);
-    	port.setParity(PAR_NONE);
-    	port.setStopBits(STOP_1);
-    	port.setFlowControl(FLOW_OFF);
-	port.open(QIODevice::ReadWrite);
+	progthread = new progThread;
+	connect(progthread,SIGNAL(Status(int)),this,SLOT(SetStatus(int)));
+	connect(progthread,SIGNAL(Error(QString)),this,SLOT(Alerts(QString)));
+	connect(progthread,SIGNAL(finished()),this,SLOT(ThreadFinished()));
+	connect(progthread,SIGNAL(Info(QString)),this,SLOT(SetInst(QString)));
 	
-	DataFile.setFileName(HexFile->text());
-	DataFile.open(QIODevice::ReadOnly);
-	while(!DataFile.atEnd())
-	{
-		ReadString=DataFile.readLine();
-		port.write(ReadString);
-	}
-	DataFile.close();
-	port.close();}
+	progthread->Init(HexFile->text(),SerialPort->text(),115200);
+	progthread->start();
+	ButtonsToggle(false);}
+
 

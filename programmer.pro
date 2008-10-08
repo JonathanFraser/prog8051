@@ -9,9 +9,9 @@ INCLUDEPATH += .
 CONFIG += thread
 LIBS += -lqextserialport
 # Input
-HEADERS += prog8051.h
+HEADERS += prog8051.h progThread.h
 FORMS += prog8051.ui
-SOURCES += main.cpp prog8051.cpp
+SOURCES += main.cpp prog8051.cpp progThread.cpp
 
 unix:DEFINES   = _TTY_POSIX_
 win32:DEFINES  = _TTY_WIN_ QWT_DLL QT_DLL
