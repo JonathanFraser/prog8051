@@ -9,6 +9,8 @@ prog8051::prog8051(QWidget* parent):QDialog(parent)
 	connect(QuitButton,SIGNAL(clicked()),this,SLOT(accept()));
 	connect(BrowseButton,SIGNAL(clicked()),this,SLOT(BrowseClicked()));
 	connect(ProgramButton,SIGNAL(clicked()),this,SLOT(ProgramClicked()));
+	connect(StopButton,SIGNAL(clicked()),this,SLOT(StopClicked()));
+	StopButton->setEnabled(false);
 	ProgressBar->setRange(0,100);
 }
 
@@ -33,7 +35,6 @@ void prog8051::SetStatus(int i)
 
 void prog8051::ThreadFinished()
 {
-	SetInst("Adjust Settings....");
 	ButtonsToggle(true);
 }
 
@@ -45,6 +46,7 @@ void prog8051::ButtonsToggle(bool on)
 	BrowseButton->setEnabled(on);
 	ProgramButton->setEnabled(on);
 	QuitButton->setEnabled(on);
+	StopButton->setEnabled(!on);
 	
 }
 
@@ -53,14 +55,30 @@ void prog8051::SetInst(QString str)
 	Instructions->setText(str);
 }
 
+void prog8051::StopClicked()
+{
+	if(progthread != NULL)
+		progthread->Cancel();
+}
+
 void prog8051::ProgramClicked(void)
 {
+	if(HexFile->text() == "")
+	{
+		BrowseClicked();
+		if(HexFile->text() == "")
+		{
+			QMessageBox::information(this,"ERROR","ERROR: I need a filename to proceed.");
+			return;
+		}
+	}
+	
 	progthread = new progThread;
 	connect(progthread,SIGNAL(Status(int)),this,SLOT(SetStatus(int)));
 	connect(progthread,SIGNAL(Error(QString)),this,SLOT(Alerts(QString)));
 	connect(progthread,SIGNAL(finished()),this,SLOT(ThreadFinished()));
 	connect(progthread,SIGNAL(Info(QString)),this,SLOT(SetInst(QString)));
-	
+
 	progthread->Init(HexFile->text(),SerialPort->text(),115200);
 	progthread->start();
 	ButtonsToggle(false);}

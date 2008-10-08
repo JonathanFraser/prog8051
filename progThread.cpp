@@ -1,12 +1,14 @@
-
+#include <QApplication>
 #include "progThread.h"
 #include <QTime>
-
+#define LINESIZE 32
 
 void progThread::Init(QString Filename,QString Portname,int Baudrate)
 {
 	port = Portname;
 	file = Filename;
+	stop=false;
+	delay = (unsigned char)14000/Baudrate;
 	switch(Baudrate)
 	{
 		case 300:
@@ -112,18 +114,22 @@ int progThread::LoadFile()
 	return MaxAddress;
 }
 
-bool progThread::PortWrRd(char c,int delay)
+int progThread::PortWrRd(QByteArray c,int delay)
 {
-	char s;
-	PortHandle->write(&c,1);
+	QByteArray s;
+	PortHandle->write(c);
 	msleep(delay+1);
-	PortHandle->read(&s,1);
-	return (c==s)?true:false;
+	s=PortHandle->read(c.length());
+	if(c==s)
+		return c.length();
+	else
+		return 0;
 }
 
 bool progThread::PortWrStr(QByteArray Str)
 {
 	QTime timer;
+	bool retval =false;
 	char c='$';
 	PortHandle->write(Str);
 	timer.start();
@@ -131,7 +137,9 @@ bool progThread::PortWrStr(QByteArray Str)
 	{
 		PortHandle->read(&c,1);
 	}
-	return (c=='.')?true:false;
+	retval = (c=='.')?true:false;
+	while(PortHandle->read(&c,1));
+	return retval;
 }
 
 bool progThread::PrepareIntelLine(QByteArray* x,int address,int length)
@@ -139,25 +147,32 @@ bool progThread::PrepareIntelLine(QByteArray* x,int address,int length)
 	unsigned char chksum;
 	bool retval=false;
 	QString Buff;
-	emit Info("Loading Hex File");	
-	Buff = ":%1%200";
-	Buff.arg(length,2,16).arg(address,4,16);
-	
+	unsigned char c;	
+	QChar spacer('0');
+	Buff = QString(":%1%2").arg(length,2,16,spacer).arg(address,4,16,spacer);
+	Buff += "00";
 	chksum = (unsigned char)(length + (address%0x100) + (address/0x100));
-	
 	for(int j=0;j<length;j++)
 	{
-		Buff+=QString("%1").arg((unsigned char)FlashBuff[address+j],2,16);
-		chksum += (unsigned char) FlashBuff[address+j];
-		if(((unsigned char) FlashBuff[address+j])!=0xff) retval=true;
+		c = FlashBuff[address+j];
+		Buff+=QString("%1").arg( c,2,16,spacer);
+		chksum += c;
+		if(c!=0xff) retval=true;
 	}
-	Buff+=QString("%1\r\n").arg((unsigned char)(0x100-chksum),2,16);
-	*x += Buff.toAscii();
+	Buff+=QString("%1\r\n").arg((unsigned char)(0x100-chksum),2,16,spacer);
+	*x = Buff.toAscii();
 	return retval;
+}
+
+void progThread::Cancel()
+{
+	stop=true;
 }
 
 void progThread::run(void)
 {
+	int GoodU,Utries;
+	QByteArray Buffer;
 	PortHandle = new QextSerialPort();
 	PortHandle->setPortName(port);
 	PortHandle->setBaudRate(baud);
@@ -165,8 +180,109 @@ void progThread::run(void)
     	PortHandle->setParity(PAR_NONE);
     	PortHandle->setStopBits(STOP_2);
     	PortHandle->setFlowControl(FLOW_OFF);
-	PortHandle->open(QIODevice::ReadWrite);
+	
+
 	LoadFile();
+	emit Status(0);
+	
+	if(!PortHandle->open(QIODevice::ReadWrite))
+	{
+		emit Error("Could not open Serial Port");
+		return;
+	}
+
+	PortHandle->setDtr(0);
+	msleep(5);
+	PortHandle->setDtr(1);
+	msleep(5);
+	
+	emit Info("Please Reset Microcontroller Now....");
+		
+	PortHandle->setTimeout(0,0);
+	
+	while(!stop)
+	{
+		if((GoodU==0) && ((Utries%200)==0))
+		{
+			PortHandle->setDtr(0);
+			msleep(5);
+			PortHandle->setDtr(1);
+			msleep(5);
+		}
+		Utries++;
+		
+		if(PortWrRd("U",delay))
+			GoodU++;
+		else
+			GoodU=0;
+		
+		emit Status(GoodU*2);
+		if(GoodU == 50) break;
+	}
+	
+	if(stop)
+	{
+		emit Error("Programming Aborted By user");
+		emit Info("ERROR");
+		PortHandle->close();
+		delete PortHandle;
+		return;
+	}	
+	
+	if(!PortWrStr(":0100000301FB"))
+	{
+		emit Error("Flash Erase Failed");
+		emit Info("ERROR");
+		PortHandle->close();
+		delete PortHandle;
+		return;
+	}
+	
+	emit Info("Flash Erased");
+	emit Status(0);
+		
+	for(int j=0;j<0x10000;j+=LINESIZE)
+	{
+		if(stop)
+		{
+			emit Error("Programming Aborted By user");
+			emit Info("ERROR");
+			PortHandle->close();
+			delete PortHandle;
+			return;
+		}
+		
+		Info(QString("0x%1").arg(j,4,16,QChar('0')));
+		Status(j*100/0x10000);
+		if(PrepareIntelLine(&Buffer,j,LINESIZE))
+		{
+			if(!PortWrStr(Buffer))
+			{
+				emit Error("Flash Program Command Failed");
+				emit Info("ERROR");
+				PortHandle->close();
+				delete PortHandle;
+				return;
+			}
+		}
+	}
+	
+	if(!PortWrStr(":00000001FF\r\n"))
+	{
+		emit Error("Flash end Failed");
+		emit Info("ERROR");
+		PortHandle->close();
+		delete PortHandle;
+		return;
+	}
+	emit Status(100);
+	emit Info("Flash Complete!!!");
+	
+	PortHandle->setDtr(0);
+	msleep(5);
+	PortHandle->setDtr(1);
+	msleep(5);
+			
 	PortHandle->close();
 	delete PortHandle;
 }

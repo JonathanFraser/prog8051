@@ -16,6 +16,7 @@ class prog8051: public QDialog, public Ui::prog8051
 	private slots:
 		void BrowseClicked(void);
 		void ProgramClicked(void);
+		void StopClicked(void);
 		void SetStatus(int);
 		void Alerts(QString);
 		void SetInst(QString);
