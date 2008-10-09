@@ -1,0 +1,2 @@
+#include <QStringList>
+QStringList GetSerialList();

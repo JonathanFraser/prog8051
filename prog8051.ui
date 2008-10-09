@@ -5,8 +5,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>364</width>
-    <height>211</height>
+    <width>315</width>
+    <height>210</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -23,9 +23,12 @@
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="SerialPort" >
-       <property name="text" >
-        <string>/dev/ttyUSB0</string>
+      <widget class="QComboBox" name="SerialPort" >
+       <property name="sizePolicy" >
+        <sizepolicy vsizetype="Fixed" hsizetype="MinimumExpanding" >
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
       </widget>
      </item>
@@ -57,12 +60,22 @@
       <widget class="QComboBox" name="Baudrate" >
        <item>
         <property name="text" >
-         <string>115200</string>
+         <string>300</string>
         </property>
        </item>
        <item>
         <property name="text" >
-         <string>19200</string>
+         <string>600</string>
+        </property>
+       </item>
+       <item>
+        <property name="text" >
+         <string>1200</string>
+        </property>
+       </item>
+       <item>
+        <property name="text" >
+         <string>4800</string>
         </property>
        </item>
        <item>
@@ -72,7 +85,17 @@
        </item>
        <item>
         <property name="text" >
-         <string>4800</string>
+         <string>19200</string>
+        </property>
+       </item>
+       <item>
+        <property name="text" >
+         <string>38400</string>
+        </property>
+       </item>
+       <item>
+        <property name="text" >
+         <string>115200</string>
         </property>
        </item>
       </widget>

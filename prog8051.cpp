@@ -1,7 +1,9 @@
 #include <QFileDialog>
 #include <QString>
 #include <QMessageBox>
+#include <QStringList>
 #include "prog8051.h"
+#include "SerialEnumerator.h"
 
 prog8051::prog8051(QWidget* parent):QDialog(parent)
 {
@@ -12,11 +14,13 @@ prog8051::prog8051(QWidget* parent):QDialog(parent)
 	connect(StopButton,SIGNAL(clicked()),this,SLOT(StopClicked()));
 	StopButton->setEnabled(false);
 	ProgressBar->setRange(0,100);
+	SerialPort->addItems(GetSerialList());
 }
 
 void prog8051::BrowseClicked(void)
 {
 	QString filename;
+	QStringList filters;
 	filename = QFileDialog::getOpenFileName(this,tr("Open Hex File"),"",tr("Hex Files (*.ihx *.hex)"));
 	HexFile->setText(filename);
 }
@@ -79,7 +83,7 @@ void prog8051::ProgramClicked(void)
 	connect(progthread,SIGNAL(finished()),this,SLOT(ThreadFinished()));
 	connect(progthread,SIGNAL(Info(QString)),this,SLOT(SetInst(QString)));
 
-	progthread->Init(HexFile->text(),SerialPort->text(),115200);
+	progthread->Init(HexFile->text(),SerialPort->currentText(),Baudrate->currentText().toInt());
 	progthread->start();
 	ButtonsToggle(false);}
 
