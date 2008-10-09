@@ -6,6 +6,7 @@
 #ifdef _TTY_POSIX_
 QStringList GetSerialList()
 {
+	QString save = QDir::currentPath();
 	QextSerialPort port;
 	QDir directory;
 	QStringList filter;
@@ -24,6 +25,7 @@ QStringList GetSerialList()
 			port.close();
 		}
 	}
+	directory.setCurrent(save);
 	return retval;
 }
 #else

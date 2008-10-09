@@ -1,0 +1,23 @@
+Prog8051 Written By Jonathan Fraser, 2008
+based on ECEFlash Written by Jesus Calvino-Fraga,2007
+
+Prog8051 is used to flash the P89V51RD2 microcontroller.
+Based on the QT library, this tool can be recompiled on Linux,Wind0ze or Mac.
+
+This program required qextserialport, a cross-platform QT serial library which I
+have included for simplicity.
+
+
+Because it is based on QT you will need the QT4 development tools installed to
+complie this application.
+
+To compile
+	cd ./qextserialport
+	qmake qextserialport.pro
+	make
+	cd ..
+	qmake programmer.pro
+	make
+	
+you may need to copy the serial library into the same directory as the executable.
+
