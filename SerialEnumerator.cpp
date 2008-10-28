@@ -32,8 +32,19 @@ QStringList GetSerialList()
 QStringList GetSerialList()
 {
 	QStringList retval;
-	retval << "COM1" << "COM2" << "COM3" << "COM4";
-	retval << "COM5" << "COM6" << "COM7" << "COM8";
+	QString holder;
+	QextSerialPort port;
+	for(int j=1;j<256;j++)
+	{
+		holder=QString.setNum(j);
+		holder="COM"+holder;
+		port.setPortName(holder);
+		if(port.open(QIODevice::ReadWrite))
+		{
+			retval<<holder;
+			port.close();
+		}
+	}
 	return retval; 
 }
 #endif
