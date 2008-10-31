@@ -19,5 +19,7 @@ To compile
 	qmake programmer.pro
 	make
 	
-you may need to copy the serial library into the same directory as the executable.
+The libraries for the serial port need to be copied to an available location
+On windows copy the dll to the program directory or windows/system. On linux,
+copy the *.so* to /usr/local/lib/ and run ldconfig
 
